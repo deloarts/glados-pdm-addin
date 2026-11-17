@@ -1,0 +1,97 @@
+# ---------------------------------------------------------------------------
+# glados-pdm-addin: Visual Studio 2026, legacy C# csproj, .NET Framework 4.8
+# ---------------------------------------------------------------------------
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio user, cache and IDE state
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.VC.db
+*.VC.VC.opendb
+*.vsp
+*.vspx
+*.sap
+.vscode/
+.idea/
+_ReSharper*/
+*.DotSettings.user
+
+# NuGet (packages.config restores into packages/)
+packages/
+*.nupkg
+*.snupkg
+.nuget/
+project.lock.json
+project.fragment.lock.json
+
+# MSBuild / compiler intermediates
+*.cache
+*.tlog
+*.log
+*.pdb
+*.ilk
+*.meta
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.pidb
+*.svclog
+*.scc
+*.psess
+*.vspscc
+*.vssscc
+*.tlb
+*.tli
+*.tlh
+*.rsp
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.aps
+
+# Leftovers of the former build-time key configuration (secrets never enter git)
+Local.props
+BuildConfig.cs
+
+# Code signing
+*.pfx
+*.snk
+*.p12
+
+# Test and coverage output
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+
+# Local planning, audits and Claude Code session state
+.playground/
+.audit/
+.claude/settings.local.json
+
+# Machine-specific Claude Code instructions (local paths)
+CLAUDE.local.md
+
+# OS clutter
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

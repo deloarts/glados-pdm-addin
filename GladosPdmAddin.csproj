@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A3D421EC-BFF5-49CE-B8BC-DE323C168411}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>GladosPdmAddin</RootNamespace>
+    <AssemblyName>GladosPdmAddin</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <!--
+    SOLIDWORKS PDM interop assembly, proprietary to Dassault Systemes SolidWorks Corporation.
+    The build references the copy of a local PDM client installation; at runtime the add-in binds
+    to the copy every PDM client already has. Both flags below keep it out of what we ship:
+    EmbedInteropTypes False compiles none of its type definitions into GladosPdmAddin.dll, and
+    Private False keeps the DLL out of bin\, so it can never be uploaded with the add-in by
+    mistake. Do not change either flag (Visual Studio's reference properties make that easy).
+  -->
+  <ItemGroup>
+    <Reference Include="EPDM.Interop.epdm">
+      <HintPath>C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS PDM\EPDM.Interop.epdm.dll</HintPath>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Web.Extensions" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AddIn.cs" />
+    <Compile Include="GladosClient.cs" />
+    <Compile Include="GladosCallResult.cs" />
+    <Compile Include="GladosCredentials.cs" />
+    <Compile Include="GladosTabControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="TokenTestResult.cs" />
+    <Compile Include="BackendVersionCheck.cs" />
+    <Compile Include="BackendVersionResult.cs" />
+    <Compile Include="FileHistoryEntry.cs" />
+    <Compile Include="FileHistoryResult.cs" />
+    <Compile Include="GladosSignInForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Logging.cs" />
+    <Compile Include="RateLimiter.cs" />
+    <Compile Include="TriggerItem.cs" />
+    <Compile Include="TriggerRetryQueue.cs" />
+    <Compile Include="Hooks\FileResolver.cs" />
+    <Compile Include="Hooks\TriggerHook.cs" />
+    <Compile Include="Hooks\ExplorerTabHook.cs" />
+    <Compile Include="Hooks\MenuHook.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Hooks\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".editorconfig" />
+    <None Include="CLAUDE.md" />
+    <None Include="README.md" />
+    <None Include="THIRD-PARTY-NOTICES.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include=".gitattributes" />
+    <Content Include=".gitignore" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
