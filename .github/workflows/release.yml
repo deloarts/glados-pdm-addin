@@ -1,0 +1,165 @@
+# Release: tag a version of glados-pdm-addin and create its draft GitHub Release when its
+# release PR is merged.
+#
+# Merging a pull request from `release/X.Y.Z` into main is the release action. This workflow
+# verifies the merge, tags the squash commit vX.Y.Z and creates a draft GitHub Release from the
+# matching CHANGELOG.md section. It does not build: the DLL compiles against the SOLIDWORKS PDM
+# client's interop assembly, which a GitHub-hosted runner does not have. scripts/Publish-Release.ps1
+# builds the tag on a developer machine, attaches GladosPdmAddin.dll and SHA256SUMS.txt and
+# publishes the draft. Until then only repository writers see the release, so nobody downloads
+# a release without its DLL. Tagging happens here, not by hand: a tag pushed by hand creates no
+# release.
+#
+# workflow_dispatch (on main only) is the recovery path when the automatic run failed after the
+# merge: it tags the current main head if it is releasable as the given version and the tag is
+# still free. See docs/RELEASE.md for the full release flow.
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to tag on the current main head (X.Y.Z), only to recover a failed release run"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    # Only merged PRs from a release branch of this repository, never from a fork, and never a
+    # PR that was closed without merging.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       startsWith(github.event.pull_request.head.ref, 'release/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.info.outputs.version }}
+      sha: ${{ steps.info.outputs.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Derive version
+        id: info
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "$EVENT" == "workflow_dispatch" ]]; then
+            if [[ "$REF" != "refs/heads/main" ]]; then
+              echo "::error::Run the recovery dispatch on main, not $REF" >&2
+              exit 1
+            fi
+            version="$INPUT_VERSION"
+          else
+            version="${HEAD_REF#release/}"
+          fi
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$version' is not an X.Y.Z version" >&2
+            exit 1
+          fi
+
+          {
+            echo "version=$version"
+            echo "sha=$(git rev-parse HEAD)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check AssemblyInfo, mlAddInVersion, CHANGELOG and tag
+        shell: pwsh
+        run: scripts/Test-ReleaseVersion.ps1 -Version "${{ steps.info.outputs.version }}"
+
+      # A squash commit's only parent is main as it was right before the merge. If the release
+      # branch did not contain it, main had moved on and the merge would tag code the tested
+      # release branch never contained.
+      - name: Check the release branch contained main
+        if: github.event_name == 'pull_request'
+        env:
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # The head branch is deleted on merge, so its commit is only reachable
+          # through the pull request's ref.
+          git fetch --no-tags origin "refs/pull/${PR_NUMBER}/head"
+          if ! git merge-base --is-ancestor "${MERGE_SHA}^" "$HEAD_SHA"; then
+            echo "::error::The release branch was behind main when it was merged. Nothing was tagged. Validate main and use the workflow_dispatch recovery, or cut the next patch." >&2
+            exit 1
+          fi
+
+  release:
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.guard.outputs.sha }}
+
+      # Skipped when the tag already points at this commit, so a re-run of this job after a
+      # failed draft step does not fail on its own earlier tag.
+      - name: Create and push tag
+        env:
+          VERSION: ${{ needs.guard.outputs.version }}
+          SHA: ${{ needs.guard.outputs.sha }}
+        run: |
+          git fetch --tags origin
+          if existing=$(git rev-parse --verify --quiet "refs/tags/v$VERSION^{commit}"); then
+            if [[ "$existing" != "$SHA" ]]; then
+              echo "::error::v$VERSION already exists on $existing, not on $SHA" >&2
+              exit 1
+            fi
+            echo "v$VERSION already points at $SHA."
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              tag -a "v$VERSION" -m "Release v$VERSION" "$SHA"
+          git push origin "v$VERSION"
+
+      - name: Extract changelog section for this version
+        env:
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: |
+          awk -v ver="$VERSION" '
+            /^## \[/ {
+              if (found) exit
+              if (index($0, "[" ver "]") > 0) { found=1 }
+              next
+            }
+            found { print }
+          ' CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "(No CHANGELOG.md section found for $VERSION.)" > release_notes.md
+          fi
+
+      - name: Create draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "A release for v$VERSION already exists."
+            exit 0
+          fi
+          gh release create "v$VERSION" --draft --verify-tag \
+            --title "v$VERSION" --notes-file release_notes.md
