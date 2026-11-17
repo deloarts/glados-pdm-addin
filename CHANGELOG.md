@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-17
+
 First release. The GLADOS PDM Add-in is a SOLIDWORKS PDM Professional vault add-in that tells GLADOS right away when a vault file changes, so item data stays current without waiting for the next poll, and shows on a GLADOS tab in the File Explorer vault view what GLADOS did with the selected files. It never writes to GLADOS or to the vault and never blocks a vault operation.
 
 Supports backend 0.1.x (`pat` contract 0.1).
